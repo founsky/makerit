@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   // "MAKER" | "CLIENT"
+  bio          String?
+  avatarPath   String?
+  city         String?
+  country      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  printerBrand    String?
+  printerModel    String?
+  materials       String?
+  maxBuildVolume  String?
+  pricePerGram    Float?
+  acceptsRequests Boolean  @default(true)
+  totalEarnings   Float    @default(0)
+  models              Model[]
+  sentRequests        PrintRequest[] @relation("ClientRequests")
+  receivedRequests    PrintRequest[] @relation("MakerRequests")
+  sentMessages        Message[]
+  conversationsAsA    Conversation[] @relation("ParticipantA")
+  conversationsAsB    Conversation[] @relation("ParticipantB")
+  payments            Payment[]
+  reviewsGiven        Review[]       @relation("ReviewAuthor")
+  reviewsReceived     Review[]       @relation("ReviewSubject")
+}
+
+model Model {
+  id            String   @id @default(cuid())
+  makerId       String
+  title         String
+  description   String?
+  filePath      String
+  thumbnailPath String?
+  category      String?
+  tags          String?
+  isPublic      Boolean  @default(true)
+  priceEstimate Float?
+  downloadCount Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  maker         User          @relation(fields: [makerId], references: [id])
+  printRequests PrintRequest[]
+}
+
+model PrintRequest {
+  id          String   @id @default(cuid())
+  clientId    String
+  makerId     String
+  modelId     String?
+  stlFilePath String?
+  status      String   @default("PENDING")
+  color       String?
+  material    String?
+  quantity    Int      @default(1)
+  notes       String?
+  quotedPrice Float?
+  finalPrice  Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  client      User    @relation("ClientRequests", fields: [clientId], references: [id])
+  maker       User    @relation("MakerRequests", fields: [makerId], references: [id])
+  model       Model?  @relation(fields: [modelId], references: [id])
+  payment     Payment?
+  review      Review?
+}
+
+model Conversation {
+  id             String   @id @default(cuid())
+  participantAId String
+  participantBId String
+  createdAt      DateTime @default(now())
+  lastMessageAt  DateTime @default(now())
+  participantA   User      @relation("ParticipantA", fields: [participantAId], references: [id])
+  participantB   User      @relation("ParticipantB", fields: [participantBId], references: [id])
+  messages       Message[]
+  @@unique([participantAId, participantBId])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String
+  body           String
+  createdAt      DateTime @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  sender         User         @relation(fields: [senderId], references: [id])
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  requestId String   @unique
+  payerId   String
+  amount    Float
+  currency  String   @default("EUR")
+  status    String   @default("pending")
+  paidAt    DateTime?
+  createdAt DateTime @default(now())
+  request   PrintRequest @relation(fields: [requestId], references: [id])
+  payer     User         @relation(fields: [payerId], references: [id])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  requestId String   @unique
+  authorId  String
+  subjectId String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  request   PrintRequest @relation(fields: [requestId], references: [id])
+  author    User         @relation("ReviewAuthor",  fields: [authorId],  references: [id])
+  subject   User         @relation("ReviewSubject", fields: [subjectId], references: [id])
+}
