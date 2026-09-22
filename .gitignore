@@ -8,7 +8,7 @@ node_modules/
 out/
 build/
 
-# Database (local only — use migrations for schema)
+# Database (SQLite local dev only — Supabase en prod)
 prisma/*.db
 prisma/*.db-journal
 prisma/prisma/

@@ -9,7 +9,7 @@ interface Message {
   body: string
   senderId: string
   createdAt: string
-  sender: { name: string }
+  sender: { id?: string; name: string; avatarPath?: string | null }
 }
 
 interface SessionUser {
@@ -26,19 +26,18 @@ export default function ConversationPage() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  async function fetchMessages() {
-    const res = await fetch(`/api/messages/${conversationId}`)
-    if (res.ok) {
-      const data = await res.json()
-      setMessages(data)
-    }
-  }
-
   useEffect(() => {
     fetch('/api/auth/me').then((r) => r.json()).then(setUser)
-    fetchMessages()
-    const interval = setInterval(fetchMessages, 3000)
-    return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    const es = new EventSource(`/api/messages/${conversationId}/stream`)
+    es.onmessage = (e) => {
+      const data = JSON.parse(e.data)
+      if (data.type === 'init') setMessages(data.messages)
+      if (data.type === 'messages') setMessages(prev => [...prev, ...data.messages])
+    }
+    return () => es.close()
   }, [conversationId])
 
   useEffect(() => {
